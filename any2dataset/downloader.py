@@ -15,7 +15,7 @@ from .logger import CappedCounter
 from .logger import write_stats
 
 
-def download_file(row, timeout):
+def download_file(row, timeout, head_only):
     """Download a file with urllib"""
     key, url = row
     file_stream = None
@@ -24,6 +24,7 @@ def download_file(row, timeout):
             url,
             data=None,
             headers={"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0"},
+            method="HEAD" if head_only else "GET",
         )
         with urllib.request.urlopen(request, timeout=timeout) as r:
             file_stream = io.BytesIO(r.read())
@@ -34,9 +35,9 @@ def download_file(row, timeout):
         return key, None, str(err)
 
 
-def download_file_with_retry(row, timeout, retries):
+def download_file_with_retry(row, timeout, retries, head_only):
     for _ in range(retries + 1):
-        key, file_stream, err = download_file(row, timeout)
+        key, file_stream, err = download_file(row, timeout, head_only)
         if file_stream is not None:
             return key, file_stream, err
     return key, None, err
@@ -67,6 +68,7 @@ class Downloader:
         oom_shard_count,
         compute_md5,
         retries,
+        head_only,
     ) -> None:
         self.sample_writer_class = sample_writer_class
         self.subsampler = subsampler
@@ -79,6 +81,7 @@ class Downloader:
         self.oom_shard_count = oom_shard_count
         self.compute_md5 = compute_md5
         self.retries = retries
+        self.head_only = head_only
 
     def __call__(
         self,
@@ -150,7 +153,9 @@ class Downloader:
         oom_sample_per_shard = math.ceil(math.log10(self.number_sample_per_shard))
         with ThreadPool(self.thread_count) as thread_pool:
             for key, file_stream, error_message in thread_pool.imap_unordered(
-                lambda x: download_file_with_retry(x, timeout=self.timeout, retries=self.retries),
+                lambda x: download_file_with_retry(
+                    x, timeout=self.timeout, retries=self.retries, head_only=self.head_only
+                ),
                 loader,
             ):
                 try:
