@@ -9,10 +9,29 @@ import time
 import hashlib
 import pyarrow as pa
 import traceback
+import subprocess
+import soundfile as sf
 
 import fsspec
 from .logger import CappedCounter
 from .logger import write_stats
+
+def download_file(row, timeout):
+    """Download a file with ffmpeg"""
+    key, url = row
+    file_stream = None
+    try:
+        cmd = f'ffmpeg -v error -i {url} -timeout {timeout}  -c copy -f s16le pipe:1'
+        p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        file_stream = io.BytesIO(p.stdout.read())
+        ffmpeg_err = p.stderr.read().decode('utf-8')
+        if ffmpeg_err != '':
+            return key, None, ffmpeg_err
+        return key, file_stream, None
+    except Exception as err:  # pylint: disable=broad-except
+        if file_stream is not None:
+            file_stream.close()
+        return key, None, str(err)
 
 
 def download_file(row, timeout):
@@ -27,6 +46,7 @@ def download_file(row, timeout):
         )
         with urllib.request.urlopen(request, timeout=timeout) as r:
             file_stream = io.BytesIO(r.read())
+            # sf.read(file_stream)
         return key, file_stream, None
     except Exception as err:  # pylint: disable=broad-except
         if file_stream is not None:
