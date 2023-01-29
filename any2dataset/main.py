@@ -144,7 +144,10 @@ def download(
         subjob_size,
     )
     logger_process.join()
-    fs.rm(tmp_dir, recursive=True)
+    try:
+        fs.rm(tmp_dir, recursive=True)
+    except:
+        pass
 
 
 def main():
