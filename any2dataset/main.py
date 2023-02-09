@@ -41,7 +41,8 @@ def download(
     retries: int = 0,
     disable_all_reencoding: bool = False,
     max_size: int = 15,
-    f: str= 'flac'
+    f: str= 'flac',
+    get_meta: bool = False,
 ):
     """Download is the main entry point of any2dataset, it uses multiple processes and download multiple files"""
     config_parameters = dict(locals())
@@ -115,7 +116,8 @@ def download(
 
     subsampler = Subsampler(
         disable_all_reencoding=disable_all_reencoding,
-        f=f
+        f=f,
+        get_meta=get_meta
     )
 
     downloader = Downloader(

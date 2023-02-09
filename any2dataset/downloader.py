@@ -189,6 +189,7 @@ class Downloader:
                     file_stream.seek(0)
                     (
                         file,
+                        ffmpeg_meta,
                         error_message,
                     ) = self.subsampler(file_stream)
                     if error_message is not None:
@@ -216,6 +217,7 @@ class Downloader:
                         meta["md5"] = hashlib.md5(file_stream.read()).hexdigest()
 
                     meta["status"] = status
+                    meta['audio_meta'] = ffmpeg_meta
                     file_stream.close()
                     del file_stream
 

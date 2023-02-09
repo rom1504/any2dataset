@@ -2,6 +2,8 @@
 
 import subprocess as sp
 import io
+import shlex
+import json
 
 
 class Subsampler:
@@ -16,29 +18,47 @@ class Subsampler:
     def __init__(
         self,
         disable_all_reencoding=False,
+        f='flac',
+        get_meta=False
     ):
         self.disable_all_reencoding = disable_all_reencoding
+        self.get_meta = get_meta
+        self.f = f
 
-    def __call__(self, file_stream, f='flac'):
+    def __call__(self, file_stream):
         """
         input: an file stream
         output: file_stream, err
         """
         try:
+            meta = None
 
             cmd = [
                 'ffmpeg',
                 '-v', 'error',
                 '-i', 'pipe:',
-                '-f', f,
+                '-f', self.f,
                 'pipe:'
                 ]
 
             proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE)
             file_stream = proc.communicate(file_stream.read())[0]
             proc.wait()
+            if self.get_meta:
 
-            return file_stream, None
+                try:
+
+                    cmd = 'ffprobe -v error -show_format -of json pipe:'.split()
+
+                    proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE)
+                    meta = proc.communicate(file_stream)[0]
+
+
+                    meta = json.loads(meta)['format']['tags']
+                except Exception as err:
+                    meta = None
+
+            return file_stream, meta, None
 
         except Exception as err:  # pylint: disable=broad-except
-            return None, str(err)
+            return None, None, str(err)
