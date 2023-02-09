@@ -1,5 +1,8 @@
 """subsampler module handle file resizing"""
 
+import subprocess as sp
+import io
+
 
 class Subsampler:
     """
@@ -16,16 +19,26 @@ class Subsampler:
     ):
         self.disable_all_reencoding = disable_all_reencoding
 
-    def __call__(self, file_stream):
+    def __call__(self, file_stream, f='flac'):
         """
         input: an file stream
-        output: file_str, width, height, original_width, original_height, err
+        output: file_stream, err
         """
         try:
-            if self.disable_all_reencoding:
-                return file_stream.read(), None
 
-            return file_stream.read(), None
+            cmd = [
+                'ffmpeg',
+                '-v', 'error',
+                '-i', 'pipe:',
+                '-f', f,
+                'pipe:'
+                ]
+
+            proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE)
+            file_stream = proc.communicate(file_stream.read())[0]
+            proc.wait()
+
+            return file_stream, None
 
         except Exception as err:  # pylint: disable=broad-except
             return None, str(err)

@@ -40,6 +40,8 @@ def download(
     subjob_size: int = 1000,
     retries: int = 0,
     disable_all_reencoding: bool = False,
+    max_size: int = 15,
+    f: str= 'flac'
 ):
     """Download is the main entry point of any2dataset, it uses multiple processes and download multiple files"""
     config_parameters = dict(locals())
@@ -113,6 +115,7 @@ def download(
 
     subsampler = Subsampler(
         disable_all_reencoding=disable_all_reencoding,
+        f=f
     )
 
     downloader = Downloader(
@@ -127,6 +130,7 @@ def download(
         oom_shard_count=oom_shard_count,
         compute_md5=compute_md5,
         retries=retries,
+        max_size=max_size
     )
 
     print("Starting the downloading of this file")
