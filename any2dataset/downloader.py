@@ -41,9 +41,9 @@ def download_file(row, timeout, max_size):
         return key, None, str(err)
 
 
-def download_file_with_retry(row, timeout, retries, max_siz):
+def download_file_with_retry(row, timeout, retries, max_size):
     for _ in range(retries + 1):
-        key, file_stream, err = download_file(row, timeout)
+        key, file_stream, err = download_file(row, timeout, max_size)
         if file_stream is not None:
             return key, file_stream, err
     return key, None, err
