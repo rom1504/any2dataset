@@ -34,24 +34,31 @@ class Subsampler:
             meta = None
 
             cmd = [
-                'ffmpeg',
+                '/fsx/iejmac/ffmpeg2/ffmpeg',
                 '-v', 'error',
                 '-i', 'pipe:',
                 '-f', self.f,
                 'pipe:'
                 ]
 
-            proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE)
-            file_stream = proc.communicate(file_stream.read())[0]
+            proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
+            out, err = proc.communicate(file_stream.read())
+            err = err.decode()
             proc.wait()
+            if err != '':
+                return None, None, err
+            file_stream = out
             if self.get_meta:
 
                 try:
 
-                    cmd = 'ffprobe -v error -show_format -of json pipe:'.split()
+                    cmd = '/fsx/iejmac/ffmpeg2/ffprobe -v error -show_format -of json pipe:'.split()
 
-                    proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE)
-                    meta = proc.communicate(file_stream)[0]
+                    proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
+                    meta, err = proc.communicate(file_stream)
+                    err = err.decode()
+                    if err != '':
+                        return files_tream, None, err
 
 
                     meta = json.loads(meta)['format']['tags']
