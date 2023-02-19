@@ -1,9 +1,10 @@
 from any2dataset import download
 import time
 import sys
+import os
 from pyspark.sql import SparkSession
 
-output_dir = 's3://s-laion/CC_AUDIO_WAT_WDS'
+output_dir = 's3://s-laion/CC_AUDIO_WAT_5M_multiprocessing'
 
 if __name__ == '__main__':
 
@@ -19,15 +20,15 @@ if __name__ == '__main__':
         .config("spark.executor.memoryOverhead", "8GB")
         .config("spark.task.maxFailures", "100")
         .config("spark.ui.port", "5041")
-        .master("spark://cpu128-dy-c6i-32xlarge-1:7077")
+        .master("spark://cpu16-dy-r6i-4xlarge-25:7077")
         .appName("spark-stats")
         .getOrCreate()
     )
 
     download(
-        processes_count=128,
-        thread_count=48,
-        url_list="NON_TOXIC_AUDIO",
+        processes_count=64,
+        thread_count=128,
+        url_list="s3://s-laion/test_cc_5M.parquet",
         output_folder=output_dir,
         output_format="webdataset",
         input_format="parquet",

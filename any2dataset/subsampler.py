@@ -4,6 +4,10 @@ import subprocess as sp
 import io
 import shlex
 import json
+import sys
+import tempfile
+import uuid
+
 
 
 class Subsampler:
@@ -31,41 +35,60 @@ class Subsampler:
         output: file_stream, err
         """
         try:
-            meta = None
 
-            cmd = [
-                '/fsx/iejmac/ffmpeg2/ffmpeg',
-                '-v', 'error',
-                '-i', 'pipe:',
-                '-f', self.f,
-                'pipe:'
-                ]
+            file_bytes = file_stream.read()
 
-            proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
-            out, err = proc.communicate(file_stream.read())
-            err = err.decode()
-            proc.wait()
-            if err != '':
-                return None, None, err
-            file_stream = out
-            if self.get_meta:
+            meta = dict()
 
-                try:
+            with tempfile.TemporaryDirectory() as temp_dir:
 
-                    cmd = '/fsx/iejmac/ffmpeg2/ffprobe -v error -show_format -of json pipe:'.split()
+                tmp_name = f'{temp_dir}/{uuid.uuid4()}.{self.f}'
+            
 
-                    proc = sp.Popen(cmd, stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
-                    meta, err = proc.communicate(file_stream)
-                    err = err.decode()
-                    if err != '':
-                        return files_tream, None, err
+                cmd = [
+                    '/fsx/iejmac/ffmpeg2/ffmpeg',
+                    '-v', 'error',
+                    '-i', 'pipe:',
+                    '-f', self.f,
+                    tmp_name
+                    ]
 
+                proc = sp.Popen(cmd, stdin=sp.PIPE, stderr=sp.PIPE)
+                out, err = proc.communicate(file_bytes)
+                err = err.decode()
+                proc.wait()
+                if err != '':
+                    return None, None, err
 
-                    meta = json.loads(meta)['format']['tags']
-                except Exception as err:
-                    meta = None
+                if self.get_meta:
 
-            return file_stream, meta, None
+                    try:
+                        cmd = f'/fsx/iejmac/ffmpeg2/ffprobe -v error -show_format -of json {tmp_name}'.split()
+
+                        proc = sp.Popen(cmd, stderr=sp.PIPE, stdout=sp.PIPE)
+                        meta, err = proc.communicate()
+                        meta_err = err.decode()
+
+                        meta = json.loads(meta)
+                        bytes_size = sys.getsizeof(file_bytes)*8
+                        bit_rate = meta['format']['bit_rate']
+                        duration = bytes_size/int(bit_rate)
+                        meta = meta['format']
+                        # if 'tags' in meta.keys():
+                        #     meta = meta['tags']
+                        # else:
+                        #     meta = dict()
+                        # meta['duration'] = duration
+                        # meta['size'] = bytes_size
+                        # meta['bit_rate'] = bit_rate
+                    except Exception as err:
+                        # print(err)
+                        meta = {}
+
+                with open(tmp_name, 'rb') as f:
+                    file_stream = f.read()
+
+                return file_stream, meta, None
 
         except Exception as err:  # pylint: disable=broad-except
             return None, None, str(err)
