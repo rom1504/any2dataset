@@ -44,7 +44,6 @@ def pyspark_distributor(
             .appName("spark-stats")
             .getOrCreate()
         )
-
     def batcher(iterable, batch_size):
         iterator = iter(iterable)
         for first in iterator:
